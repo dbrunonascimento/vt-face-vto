@@ -17,8 +17,15 @@
 import FaceVTO from 'vt-face-vto';
 
     // URL of the 3D Model File to download 
-    let url = 'https://developer.apple.com/augmented-reality/quick-look/models/vintagerobot2k/toy_robot_vintage.usdz'
+    let url = 'https://firebasestorage.googleapis.com/v0/b/armodel-a8171.appspot.com/o/Model%2FVTO%20Test%2Fvglass_2.usdz?alt=media&token=ed676e72-e653-4aa9-b08b-f393b5aa07cc'
 
+    let vtoType = "glass"
+
+    /**
+     * Display the Face VTO
+     * @param {String} url URL of the 3D Model / texture(KIV)
+     * @param {String} vtoType Type of VTO
+     */
     FaceVTO.display(url,vtoType)
 
 ```
