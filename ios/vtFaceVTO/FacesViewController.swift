@@ -22,12 +22,13 @@
  * limitations under the License.
  */
 
+import Foundation
 import UIKit
 import CoreMedia
 import CoreMotion
 import SceneKit
 import AVFoundation
-import ARCore
+import ARCoreAugmentedFaces
 import SpriteKit
 
 // Filter Test
@@ -41,6 +42,7 @@ var pos_sliderY: Float = 0
 var pos_sliderZ: Float = 0
 var isCapturing: Bool = false
 
+@available(iOS 12.0, *)
 /// Demonstrates how to use ARCore Augmented Faces with SceneKit.
 public final class FacesViewController: UIViewController {
     
@@ -87,6 +89,11 @@ public final class FacesViewController: UIViewController {
     
     // MARK: - VTO General Properties
     
+    // MARK: - Resources Bundle properties
+    private var assetBundle: Bundle?
+    private var faceBundle: Bundle?
+    
+    
     
     // MARK: - Some stuff
     
@@ -102,6 +109,7 @@ public final class FacesViewController: UIViewController {
     override public func viewDidLoad() {
         super.viewDidLoad()
         
+        setupAssetBundle()
         setupUI()
         setupScene()
         setupCamera()
@@ -117,6 +125,17 @@ public final class FacesViewController: UIViewController {
         }
     }
     
+    private func setupAssetBundle(){
+        let bundle = Bundle(for: FacesViewController.self)
+        
+        let assetPath = bundle.path(forResource: "VTOAsset", ofType: "bundle")
+        assetBundle = Bundle(path: assetPath!)
+        
+        let facePath = bundle.path(forResource: "VTOFaceAsset", ofType: "bundle")
+        faceBundle = Bundle(path: facePath!)
+        
+    }
+    
     // MARK: - Setup UI
     /// Setup UI
     private func setupUI() {
@@ -127,7 +146,10 @@ public final class FacesViewController: UIViewController {
         let buttonCapture = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
         buttonCapture.center.x = self.view.center.x
         buttonCapture.center.y = self.view.frame.height - 50
-        let buttonCaptureImage = #imageLiteral(resourceName: "AR_View_Camera")
+        // let buttonCaptureImage = #imageLiteral(resourceName: "AR_View_Camera")
+        // let buttonCaptureImage = UIImage(named: "AR_View_Camera")
+        let buttonCaptureImage = UIImage(named: "Assets.xcassets/AR_View_Camera", in: assetBundle, with: .none)
+        
         buttonCapture.setImage(buttonCaptureImage, for: .normal)
         // buttonCapture.backgroundColor = UIColor.systemTeal
         // buttonCapture.setTitle("SNAP", for: .normal)
@@ -138,7 +160,10 @@ public final class FacesViewController: UIViewController {
         
         // Setup back button
         let buttonBack = UIButton(frame: CGRect(x: self.view.frame.width - 84, y: 20, width: 54, height: 30))
-        let buttonBackImage = #imageLiteral(resourceName: "AR_View_Back")
+        // let buttonBackImage = #imageLiteral(resourceName: "AR_View_Back")
+        // let buttonBackImage = UIImage(named: "AR_View_Back")
+        let buttonBackImage = UIImage(named: "Assets.xcassets/AR_View_Back", in: assetBundle, with: .none)
+        
         buttonBack.setImage(buttonBackImage, for: .normal)
         // buttonBack.backgroundColor = UIColor.systemTeal
         // buttonBack.setTitle("<", for: .normal)
@@ -151,7 +176,9 @@ public final class FacesViewController: UIViewController {
         
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
-        gradientTop.image = #imageLiteral(resourceName: "TopGradient")
+        //gradientTop.image = #imageLiteral(resourceName: "TopGradient")
+        // gradientTop.image = UIImage(named: "TopGradient")
+        gradientTop.image = UIImage(named: "Assets.xcassets/TopGradient", in: assetBundle, with: .none)
         
         skScene.view?.addSubview(gradientTop)
         skScene.view?.addSubview(buttonBack)
@@ -202,10 +229,13 @@ public final class FacesViewController: UIViewController {
         
         // let modelRoot = scene.rootNode.childNode(withName: "asset", recursively: false)
         
-        guard let faceImage = UIImage(named: "Face.scnassets/face_texture.png"),
-            let scene = SCNScene(named: "Face.scnassets/face.scn"),
-            let headOccluder = SCNScene(named: "Face.scnassets/headOccluder.scn"),
-            let arModelNode = SCNReferenceNode(url: arModelURL)
+        let sceneURL = faceBundle?.url(forResource: "Face.scnassets/face", withExtension: "scn")
+        let headOccluderURL = faceBundle?.url(forResource: "Face.scnassets/face", withExtension: "scn")
+        
+        guard let faceImage = UIImage(named: "Face.scnassets/face_texture.png", in: faceBundle, with: .none),
+            let scene = SCNScene(url: sceneURL!, options: nil),
+            let headOccluder = SCNScene(url: headOccluderURL!, options: .nil),
+            let arModelNode = SCNReferenceNode(url: arModelURL!)
             else {
                 fatalError("Failed to load face scene!")
         }
@@ -292,7 +322,8 @@ public final class FacesViewController: UIViewController {
         cameraNode.camera = sceneCamera
         cameraNode.name = "cameraNode"
         scene.rootNode.addChildNode(cameraNode)
-        let environmentTex = "photo_studio_01_1k.hdr"
+        // let environmentTex = "photo_studio_01_1k.hdr"
+        let environmentTex = UIImage(named: "Face.scnassets/photo_studio_01_1k.hdr", in: faceBundle, with: .none)
         scene.lightingEnvironment.contents = environmentTex // hdr image to use as IBL
         scene.lightingEnvironment.intensity = 1.0
         // scene.background.contents = environmentTex // set the hdr as bg
@@ -454,7 +485,10 @@ public final class FacesViewController: UIViewController {
         shareImage = img
         
         let buttonShare = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
-        let buttonShareImage = #imageLiteral(resourceName: "AR_Share_Arrow")
+        // let buttonShareImage = #imageLiteral(resourceName: "AR_Share_Arrow")
+        // let buttonShareImage = UIImage(named: "AR_Share_Arrow")
+        let buttonShareImage = UIImage(named: "Assets.xcassets/AR_Share_Arrow", in: assetBundle, with: .none)
+        
         buttonShare.center.x = self.view.center.x
         buttonShare.center.y = self.view.frame.height - 50
         buttonShare.setImage(buttonShareImage, for: .normal)
@@ -465,7 +499,10 @@ public final class FacesViewController: UIViewController {
         buttonShare.layer.cornerRadius = 10
         
         let buttonBack = UIButton(frame: CGRect(x: 30, y: 20, width: 54, height: 30))
-        let buttonBackImage = #imageLiteral(resourceName: "AR_View_Back")
+        // let buttonBackImage = #imageLiteral(resourceName: "AR_View_Back")
+        // let buttonBackImage = UIImage(named: "AR_View_Back")
+        let buttonBackImage = UIImage(named: "Assets.xcassets/AR_View_Back", in: assetBundle, with: .none)
+        
         buttonBack.setImage(buttonBackImage, for: .normal)
         // buttonBack.backgroundColor = UIColor.systemTeal
         // buttonBack.setTitle("<", for: .normal)
@@ -475,7 +512,9 @@ public final class FacesViewController: UIViewController {
         
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
-        gradientTop.image = #imageLiteral(resourceName: "TopGradient")
+        // gradientTop.image = #imageLiteral(resourceName: "TopGradient")
+        // gradientTop.image = UIImage(named: "TopGradient")
+        gradientTop.image = UIImage(named: "Assets.xcassets/TopGradient", in: assetBundle, with: .none)
         
         captureVC.view.addSubview(capturedImageView)
         captureVC.view.addSubview(gradientTop)
@@ -502,7 +541,7 @@ public final class FacesViewController: UIViewController {
 }
 
 // MARK: - Camera delegate
-
+@available(iOS 12.0, *)
 extension FacesViewController : AVCaptureVideoDataOutputSampleBufferDelegate {
     
     public func captureOutput(
@@ -530,7 +569,7 @@ extension FacesViewController : AVCaptureVideoDataOutputSampleBufferDelegate {
 }
 
 // MARK: - Face Session delegate
-
+@available(iOS 12.0, *)
 extension FacesViewController : GARAugmentedFaceSessionDelegate {
     
     public func didUpdate(_ frame: GARAugmentedFaceFrame) {
@@ -558,7 +597,7 @@ extension FacesViewController : GARAugmentedFaceSessionDelegate {
 }
 
 // MARK: - Scene Renderer delegate
-
+@available(iOS 12.0, *)
 extension FacesViewController : SCNSceneRendererDelegate {
     
     public func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
@@ -774,7 +813,7 @@ func + (left: SCNVector3, right: SCNVector3) -> SCNVector3 {
     return SCNVector3Make(left.x + right.x, left.y + right.y, left.z + right.z)
 }
 
-
+@available(iOS 12.0, *)
 func occlusionMaterial() -> SCNMaterial {
     let occlusionMaterial = SCNMaterial()
     occlusionMaterial.isDoubleSided = true
@@ -878,6 +917,3 @@ class aSKScene: SKScene {
     }
     
 }
-
-
-import Foundation

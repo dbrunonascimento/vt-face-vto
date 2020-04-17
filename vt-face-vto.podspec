@@ -24,5 +24,10 @@ Pod::Spec.new do |s|
   s.dependency 'ARCore/AugmentedFaces', '~> 1.16.0'
   # ...
   # s.dependency "..."
+
+  s.resource_bundles = {
+    'VTOAsset' => ['vtFaceVTO/Assets.xcassets'],
+    'VTOFaceAsset' => ['vtFaceVTO/Face.scnassets']
+  }
 end
 
