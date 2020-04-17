@@ -26,8 +26,8 @@ Pod::Spec.new do |s|
   # s.dependency "..."
 
   s.resource_bundles = {
-    'VTOAsset' => ['vtFaceVTO/Assets.xcassets'],
-    'VTOFaceAsset' => ['vtFaceVTO/Face.scnassets']
+    'VTOAsset' => ['ios/vtFaceVTO/Assets.xcassets'],
+    'VTOFaceAsset' => ['ios/vtFaceVTO/Face.scnassets']
   }
 end
 
