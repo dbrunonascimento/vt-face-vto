@@ -70,6 +70,9 @@ public final class FacesViewController: UIViewController {
     private var containerNode: SCNNode?
     private var arModelNode: SCNReferenceNode?
     
+    private var headOccluder = SCNScene()
+    private var scene = SCNScene()
+    
     // MARK: - Motion properties
     
     private let kMotionUpdateInterval: TimeInterval = 0.1
@@ -106,8 +109,19 @@ public final class FacesViewController: UIViewController {
     
     // MARK: - Implementation methods
     
+    
+    override public func viewWillAppear(_ animated: Bool) {
+        print("vettonsVTO => viewWillAppear")
+        
+        if !VTOSetup.state {
+            print("vettonsVTO => reloading the scene")
+            setupScene()
+        }
+    }
+    
     override public func viewDidLoad() {
         super.viewDidLoad()
+        print("vettonsVTO => viewDidLoad")
         
         setupAssetBundle()
         setupUI()
@@ -115,6 +129,7 @@ public final class FacesViewController: UIViewController {
         setupCamera()
         setupMotion()
         
+        VTOSetup.state = true
         
         do {
             let fieldOfView = captureDevice?.activeFormat.videoFieldOfView ?? 0
@@ -123,6 +138,8 @@ public final class FacesViewController: UIViewController {
         } catch let error as NSError {
             NSLog("Failed to initialize Face Session with error: %@", error.description)
         }
+        
+        
     }
     
     private func setupAssetBundle(){
@@ -146,9 +163,7 @@ public final class FacesViewController: UIViewController {
         let buttonCapture = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
         buttonCapture.center.x = self.view.center.x
         buttonCapture.center.y = self.view.frame.height - 50
-        // let buttonCaptureImage = #imageLiteral(resourceName: "AR_View_Camera")
-        // let buttonCaptureImage = UIImage(named: "AR_View_Camera")
-        let buttonCaptureImage = UIImage(named: "Assets.xcassets/AR_View_Camera", in: assetBundle, with: .none)
+        let buttonCaptureImage = UIImage(named: "AR_View_Camera", in: assetBundle, compatibleWith: nil)
         
         buttonCapture.setImage(buttonCaptureImage, for: .normal)
         // buttonCapture.backgroundColor = UIColor.systemTeal
@@ -160,9 +175,7 @@ public final class FacesViewController: UIViewController {
         
         // Setup back button
         let buttonBack = UIButton(frame: CGRect(x: self.view.frame.width - 84, y: 20, width: 54, height: 30))
-        // let buttonBackImage = #imageLiteral(resourceName: "AR_View_Back")
-        // let buttonBackImage = UIImage(named: "AR_View_Back")
-        let buttonBackImage = UIImage(named: "Assets.xcassets/AR_View_Back", in: assetBundle, with: .none)
+        let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
         // buttonBack.backgroundColor = UIColor.systemTeal
@@ -176,9 +189,7 @@ public final class FacesViewController: UIViewController {
         
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
-        //gradientTop.image = #imageLiteral(resourceName: "TopGradient")
-        // gradientTop.image = UIImage(named: "TopGradient")
-        gradientTop.image = UIImage(named: "Assets.xcassets/TopGradient", in: assetBundle, with: .none)
+        gradientTop.image = UIImage(named: "TopGradient", in: assetBundle, compatibleWith: nil)
         
         skScene.view?.addSubview(gradientTop)
         skScene.view?.addSubview(buttonBack)
@@ -195,7 +206,18 @@ public final class FacesViewController: UIViewController {
     @objc func mainBackButtonAction(sender: UIButton!){
         print("vettonsVTO => Back button pressed")
         self.dismiss(animated: true, completion: nil)
+        ARAsset.vtoType = nil
+        vtoType = nil
         // vcDismiss.state = true
+        cleanup()
+    }
+    
+    private func cleanup() {
+        sceneView.gestureRecognizers?.removeAll()
+        sceneView.scene!.rootNode.enumerateChildNodes { (node, _) in
+            node.removeFromParentNode()
+        }
+        sceneView.removeFromSuperview()
     }
     
     // MARK: - Setup Scene
@@ -230,14 +252,28 @@ public final class FacesViewController: UIViewController {
         // let modelRoot = scene.rootNode.childNode(withName: "asset", recursively: false)
         
         let sceneURL = faceBundle?.url(forResource: "Face.scnassets/face", withExtension: "scn")
-        let headOccluderURL = faceBundle?.url(forResource: "Face.scnassets/face", withExtension: "scn")
+        let headOccluderURL = faceBundle?.url(forResource: "Face.scnassets/headOccluder", withExtension: "scn")
         
-        guard let faceImage = UIImage(named: "Face.scnassets/face_texture.png", in: faceBundle, with: .none),
-            let scene = SCNScene(url: sceneURL!, options: nil),
-            let headOccluder = SCNScene(url: headOccluderURL!, options: .nil),
-            let arModelNode = SCNReferenceNode(url: arModelURL!)
+        guard let faceImage = UIImage(named: "Face.scnassets/face_texture.png", in: faceBundle, compatibleWith: nil)
             else {
-                fatalError("Failed to load face scene!")
+                fatalError("vettonsVTO => Failed to load Face Texture")
+        }
+        
+        guard let arModelNode = SCNReferenceNode(url: arModelURL!)
+            else {
+                fatalError("vettonsVTO => Failed to load AR Model")
+        }
+        
+        do {
+            headOccluder = try SCNScene(url: headOccluderURL!, options: nil)
+        } catch {
+            fatalError("vettonsVTO => Failed to load headOccluder scene")
+        }
+        
+        do {
+            scene = try SCNScene(url: sceneURL!, options: nil)
+        } catch {
+            fatalError("vettonsVTO => Failed to load face scene")
         }
         
         let modelScale = simd_float3(1,1,1) * 0.01 // Multiply by 0.01 to convert cm models to meter unit
@@ -322,8 +358,7 @@ public final class FacesViewController: UIViewController {
         cameraNode.camera = sceneCamera
         cameraNode.name = "cameraNode"
         scene.rootNode.addChildNode(cameraNode)
-        // let environmentTex = "photo_studio_01_1k.hdr"
-        let environmentTex = UIImage(named: "Face.scnassets/photo_studio_01_1k.hdr", in: faceBundle, with: .none)
+        let environmentTex = UIImage(named: "Face.scnassets/photo_studio_01_1k.hdr", in: faceBundle, compatibleWith: nil)
         scene.lightingEnvironment.contents = environmentTex // hdr image to use as IBL
         scene.lightingEnvironment.intensity = 1.0
         // scene.background.contents = environmentTex // set the hdr as bg
@@ -384,7 +419,7 @@ public final class FacesViewController: UIViewController {
     /// Start receiving motion updates to determine device orientation for use in the face session.
     private func setupMotion() {
         guard motionManager.isDeviceMotionAvailable else {
-            NSLog("Device does not have motion sensors.")
+            NSLog("vettonsVTO => Device does not have motion sensors.")
             return
         }
         motionManager.deviceMotionUpdateInterval = kMotionUpdateInterval
@@ -395,7 +430,7 @@ public final class FacesViewController: UIViewController {
     private func startCameraCapture() {
         getVideoPermission(permissionHandler: { granted in
             guard granted else {
-                NSLog("Permission not granted to use camera.")
+                NSLog("vettonsVTO => Permission not granted to use camera.")
                 return
             }
             self.captureSession?.startRunning()
@@ -469,8 +504,8 @@ public final class FacesViewController: UIViewController {
         let captureVC = UIViewController()
         let capturedImageView = UIImageView(frame: view.frame)
         var img = blendImage()
-        let markImg = #imageLiteral(resourceName: "Vettons")
-        let imgVTMark = util.addWatermark(img, markImage: markImg, view: view)
+        let markImg = UIImage(named: "Vettons", in: assetBundle, compatibleWith: nil)
+        let imgVTMark = util.addWatermark(img, markImage: markImg!, view: view)
         img = imgVTMark
         
         
@@ -485,9 +520,7 @@ public final class FacesViewController: UIViewController {
         shareImage = img
         
         let buttonShare = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
-        // let buttonShareImage = #imageLiteral(resourceName: "AR_Share_Arrow")
-        // let buttonShareImage = UIImage(named: "AR_Share_Arrow")
-        let buttonShareImage = UIImage(named: "Assets.xcassets/AR_Share_Arrow", in: assetBundle, with: .none)
+        let buttonShareImage = UIImage(named: "AR_Share_Arrow", in: assetBundle, compatibleWith: nil)
         
         buttonShare.center.x = self.view.center.x
         buttonShare.center.y = self.view.frame.height - 50
@@ -499,9 +532,7 @@ public final class FacesViewController: UIViewController {
         buttonShare.layer.cornerRadius = 10
         
         let buttonBack = UIButton(frame: CGRect(x: 30, y: 20, width: 54, height: 30))
-        // let buttonBackImage = #imageLiteral(resourceName: "AR_View_Back")
-        // let buttonBackImage = UIImage(named: "AR_View_Back")
-        let buttonBackImage = UIImage(named: "Assets.xcassets/AR_View_Back", in: assetBundle, with: .none)
+        let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
         // buttonBack.backgroundColor = UIColor.systemTeal
@@ -512,9 +543,7 @@ public final class FacesViewController: UIViewController {
         
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
-        // gradientTop.image = #imageLiteral(resourceName: "TopGradient")
-        // gradientTop.image = UIImage(named: "TopGradient")
-        gradientTop.image = UIImage(named: "Assets.xcassets/TopGradient", in: assetBundle, with: .none)
+        gradientTop.image = UIImage(named: "TopGradient", in: assetBundle, compatibleWith: nil)
         
         captureVC.view.addSubview(capturedImageView)
         captureVC.view.addSubview(gradientTop)

@@ -67,6 +67,10 @@ struct vcDismiss {
     static var state : Bool = false
 }
 
+struct VTOSetup {
+    static var state: Bool = false
+}
+
 /// Utilities class to hold all utilities func
 class Utilities {
     /// Add watermark onto the image at the bottom right
@@ -98,6 +102,7 @@ class Utilities {
         
         return finalImage!
     }
+    
 }
 
 class lutFX {

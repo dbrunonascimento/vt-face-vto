@@ -64,6 +64,9 @@ class FaceVTOBridge: NSObject {
         
         // MARK: - VTO Type setting
         
+        // ARAsset.vtoType = .none
+        // print("vettonsVTO => ARAsset.vtoType before switch: \(ARAsset.vtoType)")
+        
         // Can add more later.
         switch vtoType {
         case "glass":
@@ -79,6 +82,12 @@ class FaceVTOBridge: NSObject {
         default:
             ARAsset.vtoType = .none
         }
+        
+        // print("vettonsVTO => vtoType from bridge : \(vtoType)")
+        // print("vettonsVTO => ARAsset.vtoType after switch : \(ARAsset.vtoType.debugDescription)")
+        // print("vettonsVTO => url from bridge : \(url?.description)")
+        
+        VTOSetup.state = false
         
         gotoVC()
     }
