@@ -1,4 +1,4 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, NativeEventEmitter } from 'react-native';
 
 const NativeFaceVTO = NativeModules.FaceVTO;
 
@@ -12,4 +12,9 @@ export default class FaceVTO {
     static display(url,vtoType){
         NativeFaceVTO.display(url,vtoType);
     }
+}
+
+export class FaceVTOEvent {
+    /**Event from native */
+    static Emitter = new NativeEventEmitter(NativeModules.FaceVTOEvent);
 }

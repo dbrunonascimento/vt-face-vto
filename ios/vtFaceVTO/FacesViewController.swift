@@ -200,11 +200,13 @@ public final class FacesViewController: UIViewController {
     @objc func captureButtonAction(sender: UIButton!){
         print("vettonsVTO => Capture button pressed")
         isCapturing.toggle()
+        RNEventEmitter.sharedInstance.dispatch(name: "onPress", body: ["type": "capture", "data": ["clicked":true]])
         captureImage()
     }
     
     @objc func mainBackButtonAction(sender: UIButton!){
         print("vettonsVTO => Back button pressed")
+        RNEventEmitter.sharedInstance.dispatch(name: "onPress", body: ["type": "dismiss", "data": ["clicked":true]])
         self.dismiss(animated: true, completion: nil)
         ARAsset.vtoType = nil
         vtoType = nil
@@ -561,6 +563,8 @@ public final class FacesViewController: UIViewController {
     
     @objc func shareButtonAction(sender : UIButton) {
         print("vettonsVTO => Share button pressed")
+        
+        RNEventEmitter.sharedInstance.dispatch(name: "onPress", body: ["type": "share", "data": ["clicked":true]])
         
         let img = shareImage
         let activityVC = UIActivityViewController(activityItems: [img as Any], applicationActivities: nil)

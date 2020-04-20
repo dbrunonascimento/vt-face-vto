@@ -52,6 +52,7 @@ class FaceVTOBridge: NSObject {
             ARAsset.isModelAvailable = true
             
         } catch {
+            RNEventEmitter.sharedInstance.dispatch(name: "error", body: ["type": "download", "message": "Cannot download file to directory"])
             fatalError("vettonsVTO => Cannot download file to directory")
         }
         

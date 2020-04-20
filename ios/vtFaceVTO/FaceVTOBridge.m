@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <React/RCTBridge.h>
+#import <React/RCTEventEmitter.h>
 
 
 
@@ -21,3 +22,10 @@ RCT_EXTERN_METHOD(display:(NSString)url type:(NSString)vtoType);
 }
 
 @end
+
+@interface RCT_EXTERN_MODULE(FaceVTOEvent, RCTEventEmitter)
+
+RCT_EXTERN_METHOD(supportedEvents)
+
+@end
+

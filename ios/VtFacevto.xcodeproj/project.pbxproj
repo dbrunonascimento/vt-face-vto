@@ -16,6 +16,7 @@
 		43AE2C50244818DF00F6D15E /* Face.scnassets in CopyFiles */ = {isa = PBXBuildFile; fileRef = 43AE2C4E2448169000F6D15E /* Face.scnassets */; };
 		43AE2C5D24483FF500F6D15E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43AE2C4D2448169000F6D15E /* Assets.xcassets */; };
 		43AE2C5E24483FF500F6D15E /* Face.scnassets in Resources */ = {isa = PBXBuildFile; fileRef = 43AE2C4E2448169000F6D15E /* Face.scnassets */; };
+		43AE2C72244D90D000F6D15E /* FaceVTOEventEmitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43AE2C71244D90CF00F6D15E /* FaceVTOEventEmitter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,6 +43,7 @@
 		43AE2C4B244814A200F6D15E /* FaceMeshGeometryConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMeshGeometryConverter.swift; sourceTree = "<group>"; };
 		43AE2C4D2448169000F6D15E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		43AE2C4E2448169000F6D15E /* Face.scnassets */ = {isa = PBXFileReference; lastKnownFileType = wrapper.scnassets; path = Face.scnassets; sourceTree = "<group>"; };
+		43AE2C71244D90CF00F6D15E /* FaceVTOEventEmitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceVTOEventEmitter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +72,7 @@
 				43AE2C452446FCE000F6D15E /* FaceVTOBridge.m */,
 				43AE2C4724480DEF00F6D15E /* FacesViewController.swift */,
 				43AE2C4B244814A200F6D15E /* FaceMeshGeometryConverter.swift */,
+				43AE2C71244D90CF00F6D15E /* FaceVTOEventEmitter.swift */,
 				43AE2C4924480F2200F6D15E /* Utilities.swift */,
 				43AE2C4D2448169000F6D15E /* Assets.xcassets */,
 				43AE2C4E2448169000F6D15E /* Face.scnassets */,
@@ -159,6 +162,7 @@
 			files = (
 				43AE2C462446FCE000F6D15E /* FaceVTOBridge.m in Sources */,
 				43AE2C4824480DEF00F6D15E /* FacesViewController.swift in Sources */,
+				43AE2C72244D90D000F6D15E /* FaceVTOEventEmitter.swift in Sources */,
 				43AE2C4C244814A200F6D15E /* FaceMeshGeometryConverter.swift in Sources */,
 				43AE2C4A24480F2200F6D15E /* Utilities.swift in Sources */,
 				43AE2C442446F6A700F6D15E /* FaceVTOBridge.swift in Sources */,
