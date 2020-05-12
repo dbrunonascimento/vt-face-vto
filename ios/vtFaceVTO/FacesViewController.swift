@@ -69,6 +69,7 @@ public final class FacesViewController: UIViewController {
     private lazy var headOccluderNode = SCNNode()
     private var containerNode: SCNNode?
     private var arModelNode: SCNReferenceNode?
+    private var faceImage: UIImage?
     
     private var headOccluder = SCNScene()
     private var scene = SCNScene()
@@ -87,7 +88,7 @@ public final class FacesViewController: UIViewController {
     // MARK: - AR Assets properties
     
     private var arModelURL: URL? // AR Model URL passed from the bridge
-    private var arTextureURL: URL? // Face Texture URL passed from the bridge
+    private var arFaceImage: UIImage? // Face Texture Image passed from the bridge
     private var vtoType: VTOType? // VTO Type pased from bridge
     
     // MARK: - VTO General Properties
@@ -166,9 +167,6 @@ public final class FacesViewController: UIViewController {
         let buttonCaptureImage = UIImage(named: "AR_View_Camera", in: assetBundle, compatibleWith: nil)
         
         buttonCapture.setImage(buttonCaptureImage, for: .normal)
-        // buttonCapture.backgroundColor = UIColor.systemTeal
-        // buttonCapture.setTitle("SNAP", for: .normal)
-        // buttonCapture.setTitleColor(UIColor.white, for: .normal)
         buttonCapture.addTarget(self, action: #selector(captureButtonAction(sender:)), for: .touchUpInside)
         buttonCapture.transform = CGAffineTransform(scaleX: -1, y: 1)
         buttonCapture.layer.cornerRadius = 10
@@ -178,15 +176,11 @@ public final class FacesViewController: UIViewController {
         let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
-        // buttonBack.backgroundColor = UIColor.systemTeal
-        // buttonBack.setTitle("<", for: .normal)
-        // buttonBack.setTitleColor(UIColor.white, for: .normal)
         buttonBack.addTarget(self, action:#selector(mainBackButtonAction(sender:)), for: .touchUpInside)
         buttonBack.transform = CGAffineTransform(scaleX: -1, y: 1)
         buttonBack.layer.cornerRadius = 10
         
-        //Setup gradientTop
-        
+        // Setup gradientTop
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
         gradientTop.image = UIImage(named: "TopGradient", in: assetBundle, compatibleWith: nil)
@@ -211,7 +205,7 @@ public final class FacesViewController: UIViewController {
         ARAsset.vtoType = nil
         vtoType = nil
         // vcDismiss.state = true
-        cleanup()
+        // cleanup()
     }
     
     private func cleanup() {
@@ -238,16 +232,18 @@ public final class FacesViewController: UIViewController {
         // Get AR Model URL from the bridge.
         arModelURL = ARAsset.modelURL
         
-        // MARK: - Face Texture URL
+        // MARK: - Face Texture Image
         
-        // Get Face Texture URL from the bridge
-        arTextureURL = ARAsset.textureURL
+        // Get Face Texture Image from the bridge
+        arFaceImage = ARAsset.faceImage
         
         // MARK: - Load model from local
         
+        /*
         // Get the url of the model (usdz file). Load from local asset
-        // let pathURL = Bundle.main.path(forResource: "vglass_2", ofType: "usdz", inDirectory: "Face.scnassets")!
-        // let localURL = URL(fileURLWithPath: pathURL)
+        let pathURL = Bundle.main.path(forResource: "vglass_2", ofType: "usdz", inDirectory: "Face.scnassets")!
+        let localURL = URL(fileURLWithPath: pathURL)
+        */
         
         // MARK: - Initialize Scene, Assets
         
@@ -256,10 +252,24 @@ public final class FacesViewController: UIViewController {
         let sceneURL = faceBundle?.url(forResource: "Face.scnassets/face", withExtension: "scn")
         let headOccluderURL = faceBundle?.url(forResource: "Face.scnassets/headOccluder", withExtension: "scn")
         
-        guard let faceImage = UIImage(named: "Face.scnassets/face_texture.png", in: faceBundle, compatibleWith: nil)
+        
+        guard let defaultFaceImage = UIImage(named: "Face.scnassets/face_texture.png", in: faceBundle, compatibleWith: nil)
             else {
                 fatalError("vettonsVTO => Failed to load Face Texture")
         }
+        
+        /*
+        guard let faceImage = arFaceImage else {
+            fatalError("vettonsVTO => Failed to load Face Image")
+        }
+        */
+        
+        if vtoType == .some(.makeup){
+            faceImage = arFaceImage
+        } else {
+            faceImage = defaultFaceImage
+        }
+        
         
         guard let arModelNode = SCNReferenceNode(url: arModelURL!)
             else {
@@ -286,7 +296,7 @@ public final class FacesViewController: UIViewController {
         guard let headOccluderNode = headOccluderRootNode.childNode(withName: "MDL_OBJ", recursively: false) else { return }
         headOccluderNode.geometry?.firstMaterial = occlusionMaterial() // set the material as occluder
         headOccluderNode.renderingOrder = -50
-        headOccluderRootNode.simdScale = simd_float3(1.15,1.1,1.1) * kCentimetersToMeters
+        headOccluderRootNode.simdScale = simd_float3(1.1,1.1,1.1) * kCentimetersToMeters
         headOccluderRootNode.name = "headOccluder"
         faceNode.addChildNode(headOccluderRootNode)
         
@@ -295,6 +305,7 @@ public final class FacesViewController: UIViewController {
         arModelNode.load()
         arModelNode.simdScale = modelScale
         arModelNode.simdPosition = VTARModelType.glass.assetPosition()
+        
         
         // Rotate the mesh if done without using the asset ref
         // arModelNode.simdLocalRotate(by: simd_quatf(angle: .pi, axis: simd_float3(0, 1, 0)))
@@ -661,6 +672,7 @@ extension FacesViewController : SCNSceneRendererDelegate {
         // Only show AR content when a face is detected
         sceneView.scene?.rootNode.isHidden = currentFaceFrame?.face == nil
         
+        //faceTextureMaterial.blendMode = .alpha
     }
     
     public func renderer(

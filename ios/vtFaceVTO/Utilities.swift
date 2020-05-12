@@ -24,7 +24,8 @@ enum VTARModelType{
     func assetPosition() -> simd_float3{
         switch self {
         case .glass:
-            return simd_float3(0,2.7,9.5) * 0.01
+            // return simd_float3(0,2.7,9.5) * 0.01
+            return simd_float3(0,2.4,1.5) * 0.01
         case .earring:
             return simd_float3(0,2.7,9.5) * 0.01
         default:
@@ -49,6 +50,7 @@ enum VTARModelType{
 struct ARAsset {
     static var modelURL: URL?
     static var textureURL: URL?
+    static var faceImage: UIImage?
     static var vtoType: VTOType?
     static var isModelAvailable: Bool = false
     static var isTextureAvailable: Bool = false

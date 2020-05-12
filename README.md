@@ -1,5 +1,5 @@
 # vt-face-vto
-v1.0.3
+v1.0.4
 
 ## Getting started
 
@@ -18,10 +18,14 @@ v1.0.3
 import FaceVTO, {FaceVTOEvent} from 'vt-face-vto';
 
     // URL of the 3D Model File to download 
-    let url = 'https://firebasestorage.googleapis.com/v0/b/armodel-a8171.appspot.com/o/Model%2FVTO%20Test%2Fvglass_2.usdz?alt=media&token=ed676e72-e653-4aa9-b08b-f393b5aa07cc'
+    let url = 'https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Glass%2Falghero_7.usdz?alt=media&token=f882e977-0709-49cf-8aaf-32f3c63c969e'
+
+    // URL of the Face Texture file to download
+    // let url = 'https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/FaceTexture%2FBrand%20A%2Flips14.png?alt=media&token=f7685b25-e99a-4bd1-91a0-22950744c2c1'
+
 
     // supported vtoType as for now
-    // glass, glassWithMakeup, makeup, sample, sampleWithMakeup
+    // glass, makeup
     let vtoType = "glass"
 
     /**
