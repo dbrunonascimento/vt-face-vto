@@ -75,6 +75,8 @@ class FaceVTOBridge: NSObject {
             
             ARAsset.faceImage = imageTexture
             
+            ARAsset.modelURL = textureDL
+            
             ARAsset.isTextureAvailable = true
             
         } catch {

@@ -24,7 +24,7 @@ enum VTARModelType{
     func assetPosition() -> simd_float3{
         switch self {
         case .glass:
-            // return simd_float3(0,2.7,9.5) * 0.01
+            //return simd_float3(0,2.7,9.5) * 0.01
             return simd_float3(0,2.4,1.5) * 0.01
         case .earring:
             return simd_float3(0,2.7,9.5) * 0.01
@@ -45,6 +45,17 @@ enum VTARModelType{
         }
     }
 }
+/*
+enum VTOMakeupType{
+    case eyeshadow
+    case lipstick
+    case eyeliner
+    case contour
+    case highlighter
+    case blusher
+    case eyebrow
+}
+*/
 
 /// AR Asset to store global values
 struct ARAsset {
@@ -89,8 +100,8 @@ class Utilities {
         let imageHeight = image.size.height
         let frameWidth = view.bounds.width
         let ratio = imageWidth/frameWidth
-        let markImagePosX = imageWidth - markImageWidth - 25*ratio
-        let markImagePosY = imageHeight - markImageHeight - 25*ratio
+        let markImagePosX = imageWidth - markImageWidth - 15*ratio
+        let markImagePosY = imageHeight - markImageHeight - 20*ratio
         
         //        Start Drawing
         

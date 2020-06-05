@@ -88,7 +88,8 @@ public final class FacesViewController: UIViewController {
     // MARK: - AR Assets properties
     
     private var arModelURL: URL? // AR Model URL passed from the bridge
-    private var arFaceImage: UIImage? // Face Texture Image passed from the bridge
+    private var arTextureURL: URL? // Face Texture URL passed from the bridge
+    private var arFaceImage: UIImage? // Face Image
     private var vtoType: VTOType? // VTO Type pased from bridge
     
     // MARK: - VTO General Properties
@@ -157,8 +158,10 @@ public final class FacesViewController: UIViewController {
     // MARK: - Setup UI
     /// Setup UI
     private func setupUI() {
+        
+        let overlayScene = SKScene()
         /// Using an SKScene to overlay the SceneKit so that UIKit could be used.
-        sceneView.overlaySKScene = skScene
+        sceneView.overlaySKScene = overlayScene
         
         // Setup capture button
         let buttonCapture = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
@@ -167,27 +170,34 @@ public final class FacesViewController: UIViewController {
         let buttonCaptureImage = UIImage(named: "AR_View_Camera", in: assetBundle, compatibleWith: nil)
         
         buttonCapture.setImage(buttonCaptureImage, for: .normal)
+        // buttonCapture.backgroundColor = UIColor.systemTeal
+        // buttonCapture.setTitle("SNAP", for: .normal)
+        // buttonCapture.setTitleColor(UIColor.white, for: .normal)
         buttonCapture.addTarget(self, action: #selector(captureButtonAction(sender:)), for: .touchUpInside)
         buttonCapture.transform = CGAffineTransform(scaleX: -1, y: 1)
         buttonCapture.layer.cornerRadius = 10
         
         // Setup back button
-        let buttonBack = UIButton(frame: CGRect(x: self.view.frame.width - 84, y: 20, width: 54, height: 30))
+        let buttonBack = UIButton(frame: CGRect(x: self.view.frame.width - 84, y: 30, width: 54, height: 30))
         let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
+        // buttonBack.backgroundColor = UIColor.systemTeal
+        // buttonBack.setTitle("<", for: .normal)
+        // buttonBack.setTitleColor(UIColor.white, for: .normal)
         buttonBack.addTarget(self, action:#selector(mainBackButtonAction(sender:)), for: .touchUpInside)
         buttonBack.transform = CGAffineTransform(scaleX: -1, y: 1)
         buttonBack.layer.cornerRadius = 10
         
         // Setup gradientTop
+        
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
         gradientTop.image = UIImage(named: "TopGradient", in: assetBundle, compatibleWith: nil)
         
-        skScene.view?.addSubview(gradientTop)
-        skScene.view?.addSubview(buttonBack)
-        skScene.view?.addSubview(buttonCapture)
+        overlayScene.view?.addSubview(gradientTop)
+        overlayScene.view?.addSubview(buttonBack)
+        overlayScene.view?.addSubview(buttonCapture)
         
     }
     
@@ -204,8 +214,13 @@ public final class FacesViewController: UIViewController {
         self.dismiss(animated: true, completion: nil)
         ARAsset.vtoType = nil
         vtoType = nil
-        // vcDismiss.state = true
-        // cleanup()
+        
+        switch ARAsset.vtoType {
+        case .glass:
+            cleanup()
+        default:
+            print("nothing")
+        }
     }
     
     private func cleanup() {
@@ -232,18 +247,18 @@ public final class FacesViewController: UIViewController {
         // Get AR Model URL from the bridge.
         arModelURL = ARAsset.modelURL
         
-        // MARK: - Face Texture Image
+        // MARK: - Face Texture URL
         
-        // Get Face Texture Image from the bridge
+        // Get Face Texture URL from the bridge
+        arTextureURL = ARAsset.textureURL
+        
         arFaceImage = ARAsset.faceImage
         
         // MARK: - Load model from local
         
-        /*
         // Get the url of the model (usdz file). Load from local asset
-        let pathURL = Bundle.main.path(forResource: "vglass_2", ofType: "usdz", inDirectory: "Face.scnassets")!
-        let localURL = URL(fileURLWithPath: pathURL)
-        */
+        // let pathURL = Bundle.main.path(forResource: "vglass_2", ofType: "usdz", inDirectory: "Face.scnassets")!
+        // let localURL = URL(fileURLWithPath: pathURL)
         
         // MARK: - Initialize Scene, Assets
         
@@ -258,11 +273,9 @@ public final class FacesViewController: UIViewController {
                 fatalError("vettonsVTO => Failed to load Face Texture")
         }
         
-        /*
-        guard let faceImage = arFaceImage else {
-            fatalError("vettonsVTO => Failed to load Face Image")
-        }
-        */
+        // guard let faceImage = arFaceImage else {
+           //  fatalError("vettonsVTO => Failed to load Face Image")
+        // }
         
         if vtoType == .some(.makeup){
             faceImage = arFaceImage
@@ -308,7 +321,7 @@ public final class FacesViewController: UIViewController {
         
         
         // Rotate the mesh if done without using the asset ref
-        // arModelNode.simdLocalRotate(by: simd_quatf(angle: .pi, axis: simd_float3(0, 1, 0)))
+        //arModelNode.simdLocalRotate(by: simd_quatf(angle: .pi, axis: simd_float3(0, 1, 0)))
         
         // SceneKit uses meters for units, while the canonical face mesh asset uses centimeters.
         // modelRoot.simdScale = modelScale
@@ -354,8 +367,10 @@ public final class FacesViewController: UIViewController {
             faceNode.addChildNode(torusNode)
         case .glass:
             scene.rootNode.addChildNode(containerNode!)
+            faceTextureNode.removeFromParentNode()
         case .makeup:
             faceNode.addChildNode(faceTextureNode)
+            containerNode?.removeFromParentNode()
         case .glassWithMakeup:
             scene.rootNode.addChildNode(containerNode!)
             faceNode.addChildNode(faceTextureNode)
@@ -394,7 +409,6 @@ public final class FacesViewController: UIViewController {
         // SCNMaterial does not premultiply alpha even with blendMode set to alpha, so do it manually.
         faceTextureMaterial.shaderModifiers =
             [SCNShaderModifierEntryPoint.fragment : "_output.color.rgb *= _output.color.a;"]
-        
         
         faceOccluderMaterial = occlusionMaterial()
         faceOccluderNode.renderingOrder = -50
@@ -544,7 +558,7 @@ public final class FacesViewController: UIViewController {
         buttonShare.addTarget(self, action:#selector(shareButtonAction(sender:)), for: .touchUpInside)
         buttonShare.layer.cornerRadius = 10
         
-        let buttonBack = UIButton(frame: CGRect(x: 30, y: 20, width: 54, height: 30))
+        let buttonBack = UIButton(frame: CGRect(x: 30, y: 30, width: 54, height: 30))
         let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
@@ -873,6 +887,7 @@ func occlusionMaterial() -> SCNMaterial {
 
 class aSKScene: SKScene {
     
+    /*
     let kCentimetersToMeters:Float = 0.01
     
     let sliderX = UISlider(frame: CGRect(x: 50, y: 60, width: 250, height: 30))
@@ -960,5 +975,6 @@ class aSKScene: SKScene {
         sliderZ.transform = CGAffineTransform(scaleX: -1, y: 1)
         view?.addSubview(sliderZ)
     }
+     */
     
 }
