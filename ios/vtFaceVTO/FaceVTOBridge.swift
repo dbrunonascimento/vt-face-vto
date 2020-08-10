@@ -21,8 +21,21 @@ class FaceVTOBridge: NSObject {
     
     @available(iOS 12.0, *)
     @objc
-    func display(_ url: String,type vtoType: String){
+    func sendString(_ string: String){
+        // print("stringFromRN => \(string)")
+        print("vettonsVTO => String sent from RN")
+        ARAsset.stringFromRN = string
+    }
+    
+    @available(iOS 12.0, *)
+    @objc
+    func display(_ url: String,type vtoType: String,data variantData: String,withIndex index: Int){
 
+        print(index)
+        VTOSliderItem.index = index
+        // print("stringFromRN => \(variantData)")
+        print("vettonsVTO => String sent from RN")
+        ARAsset.stringFromRN = variantData
         
         // MARK: VTO Type setting
         

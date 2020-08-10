@@ -30,6 +30,8 @@ import SceneKit
 import AVFoundation
 import ARCoreAugmentedFaces
 import SpriteKit
+import CircularCarousel
+import SDWebImageWebPCoder
 
 // Filter Test
 import CoreImage
@@ -41,6 +43,9 @@ var pos_sliderX: Float = 0
 var pos_sliderY: Float = 0
 var pos_sliderZ: Float = 0
 var isCapturing: Bool = false
+var DEBUGMODE: Bool = false
+
+
 
 @available(iOS 12.0, *)
 /// Demonstrates how to use ARCore Augmented Faces with SceneKit.
@@ -63,16 +68,16 @@ public final class FacesViewController: UIViewController {
     private lazy var faceNode = SCNNode()
     private lazy var faceTextureNode = SCNNode()
     private lazy var faceOccluderNode = SCNNode()
-    private var faceTextureMaterial = SCNMaterial()
-    private var faceOccluderMaterial = SCNMaterial()
+    private lazy var faceTextureMaterial = SCNMaterial()
+    private lazy var faceOccluderMaterial = SCNMaterial()
     
     private lazy var headOccluderNode = SCNNode()
     private var containerNode: SCNNode?
     private var arModelNode: SCNReferenceNode?
     private var faceImage: UIImage?
     
-    private var headOccluder = SCNScene()
-    private var scene = SCNScene()
+    private lazy var headOccluder = SCNScene()
+    private lazy var scene = SCNScene()
     
     // MARK: - Motion properties
     
@@ -92,22 +97,22 @@ public final class FacesViewController: UIViewController {
     private var arFaceImage: UIImage? // Face Image
     private var vtoType: VTOType? // VTO Type pased from bridge
     
-    // MARK: - VTO General Properties
-    
     // MARK: - Resources Bundle properties
     private var assetBundle: Bundle?
     private var faceBundle: Bundle?
-    
-    
     
     // MARK: - Some stuff
     
     var positionOffset: simd_float3?
     var shareImage: UIImage?
+    var currentSliderIndex = 0
+    
+    // MARK: - JSON Stuff
+    
+    let jsonStringURL = "https://www.json-generator.com/api/json/get/cfFtRgyCOG?indent=2" // Sample json from web
+    var variantJSON = "" // JSON of the product variant
     
     // MARK: - UI Stuff
-    
-    var skScene: SKScene = aSKScene()
     
     // MARK: - Implementation methods
     
@@ -115,15 +120,36 @@ public final class FacesViewController: UIViewController {
     override public func viewWillAppear(_ animated: Bool) {
         print("vettonsVTO => viewWillAppear")
         
-        if !VTOSetup.state {
-            print("vettonsVTO => reloading the scene")
+        
+        
+        if !isCapturing {
+            if !VTOSetup.state {
+                print("vettonsVTO => reloading the scene")
+                removeCacheImage()
+                variantJSON = ARAsset.stringFromRN
+                updateCount(fromJSONString: variantJSON)
+                updateSliderImages(fromJSONString: variantJSON)
+                setupUI()
+                setupScene()
+                
+            }
+        } else {
             setupScene()
+            isCapturing.toggle()
         }
+        
+        
     }
     
     override public func viewDidLoad() {
         super.viewDidLoad()
         print("vettonsVTO => viewDidLoad")
+        
+        removeCacheImage()
+        variantJSON = ARAsset.stringFromRN
+
+        updateCount(fromJSONString: variantJSON)
+        updateSliderImages(fromJSONString: variantJSON)
         
         setupAssetBundle()
         setupUI()
@@ -144,6 +170,17 @@ public final class FacesViewController: UIViewController {
         
     }
     
+    func removeCacheImage() {
+        print("vettonsVTO => removing all cache image")
+        
+        for n in 0..<VTOSliderItem.count {
+            UserDefaults.standard.removeObject(forKey: "VTOImageURL\(n)")
+            UserDefaults.standard.removeObject(forKey: "VTOVariantSliderThumb\(n)")
+        }
+        
+        print("\(VTOSliderItem.count) images in cache has been removed")
+    }
+    
     private func setupAssetBundle(){
         let bundle = Bundle(for: FacesViewController.self)
         
@@ -156,45 +193,60 @@ public final class FacesViewController: UIViewController {
     }
     
     // MARK: - Setup UI
+    
     /// Setup UI
     private func setupUI() {
         
+        /// An SKScene to use as overlay on top of SceneKit
         let overlayScene = SKScene()
         /// Using an SKScene to overlay the SceneKit so that UIKit could be used.
         sceneView.overlaySKScene = overlayScene
         
+        // MARK: - UI | Setup Capture Button
         // Setup capture button
         let buttonCapture = UIButton(frame: CGRect(x: 0, y: 0, width: 60, height: 60))
         buttonCapture.center.x = self.view.center.x
-        buttonCapture.center.y = self.view.frame.height - 50
+        buttonCapture.center.y = self.view.frame.height - 100
         let buttonCaptureImage = UIImage(named: "AR_View_Camera", in: assetBundle, compatibleWith: nil)
         
         buttonCapture.setImage(buttonCaptureImage, for: .normal)
-        // buttonCapture.backgroundColor = UIColor.systemTeal
-        // buttonCapture.setTitle("SNAP", for: .normal)
-        // buttonCapture.setTitleColor(UIColor.white, for: .normal)
         buttonCapture.addTarget(self, action: #selector(captureButtonAction(sender:)), for: .touchUpInside)
         buttonCapture.transform = CGAffineTransform(scaleX: -1, y: 1)
         buttonCapture.layer.cornerRadius = 10
         
+        // MARK: - UI | Setup Back Button
         // Setup back button
-        let buttonBack = UIButton(frame: CGRect(x: self.view.frame.width - 84, y: 30, width: 54, height: 30))
+        let buttonBack = UIButton(frame: CGRect(x: self.view.frame.width - 84, y: 60, width: 54, height: 30))
         let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
-        // buttonBack.backgroundColor = UIColor.systemTeal
-        // buttonBack.setTitle("<", for: .normal)
-        // buttonBack.setTitleColor(UIColor.white, for: .normal)
         buttonBack.addTarget(self, action:#selector(mainBackButtonAction(sender:)), for: .touchUpInside)
         buttonBack.transform = CGAffineTransform(scaleX: -1, y: 1)
         buttonBack.layer.cornerRadius = 10
         
-        // Setup gradientTop
-        
+        // MARK: - UI | Setup GradientTop
         let gradientTop = UIImageView(frame: CGRect(x: 0, y: 0, width: 375, height: 150))
         gradientTop.center.x = self.view.center.x
         gradientTop.image = UIImage(named: "TopGradient", in: assetBundle, compatibleWith: nil)
         
+        // MARK: - UI | Setup carouselSlider
+        
+        let frame = CGRect(x: 0, y: 0, width: self.view.frame.width * 0.90, height: 150)
+        let carousel = CircularCarousel(frame: frame)
+        carousel.center.x = self.view.center.x
+        carousel.center.y = self.view.frame.height - 200
+        carousel.transform = CGAffineTransform(scaleX: -1, y: 1)
+        
+        carousel.delegate = self
+        carousel.dataSource = self
+        carousel.backgroundColor = .clear
+        carousel.layer.cornerRadius = 75
+        
+        // Adding all view to the overlayScene
+        
+        if VTOSliderItem.count > 1 { // Carousel only available if it is more than one	
+            overlayScene.view?.addSubview(carousel)
+        }
         overlayScene.view?.addSubview(gradientTop)
         overlayScene.view?.addSubview(buttonBack)
         overlayScene.view?.addSubview(buttonCapture)
@@ -210,10 +262,17 @@ public final class FacesViewController: UIViewController {
     
     @objc func mainBackButtonAction(sender: UIButton!){
         print("vettonsVTO => Back button pressed")
-        RNEventEmitter.sharedInstance.dispatch(name: "onPress", body: ["type": "dismiss", "data": ["clicked":true]])
+        RNEventEmitter.sharedInstance.dispatch(name: "onPress", body: ["type": "dismiss", "data": ["clicked":true, "name":"\(VTOSliderItem.name)", "productVariantID":"\(VTOSliderItem.productVariantID)", "index":currentSliderIndex]])
+        
         self.dismiss(animated: true, completion: nil)
+        cleanup()
+        
+        
         ARAsset.vtoType = nil
         vtoType = nil
+        
+        
+        
         
         switch ARAsset.vtoType {
         case .glass:
@@ -224,11 +283,21 @@ public final class FacesViewController: UIViewController {
     }
     
     private func cleanup() {
+        print("cleanup")
+        
+        
         sceneView.gestureRecognizers?.removeAll()
         sceneView.scene!.rootNode.enumerateChildNodes { (node, _) in
             node.removeFromParentNode()
         }
+        sceneView.delegate = nil
+        sceneView.scene = nil
+        sceneView.overlaySKScene = nil
         sceneView.removeFromSuperview()
+        sceneView = SCNView()
+        self.removeFromParent()
+        
+        self.view.removeFromSuperview()
     }
     
     // MARK: - Setup Scene
@@ -355,6 +424,8 @@ public final class FacesViewController: UIViewController {
         faceTextureNode.name = "faceTexture"
         faceOccluderNode.name = "faceOccluder"
         
+        faceOccluderNode.simdPosition = simd_float3(0,0,-0.1) * 0.01
+        
         faceNode.name = "faceNode"
         // faceNode.addChildNode(faceTextureNode)
         faceNode.addChildNode(faceOccluderNode)
@@ -389,6 +460,12 @@ public final class FacesViewController: UIViewController {
         let environmentTex = UIImage(named: "Face.scnassets/photo_studio_01_1k.hdr", in: faceBundle, compatibleWith: nil)
         scene.lightingEnvironment.contents = environmentTex // hdr image to use as IBL
         scene.lightingEnvironment.intensity = 1.0
+        
+        // let ltranslation = SCNMatrix4MakeTranslation(0, -1, 0)
+        // let lrotation = SCNMatrix4MakeRotation(Float.pi / 2, 0, 0, 1)
+        // let ltransform = SCNMatrix4Mult(ltranslation, lrotation)
+
+        // scene.lightingEnvironment.contentsTransform = ltransform
         // scene.background.contents = environmentTex // set the hdr as bg
         
         // MARK: - Scene Settings
@@ -403,13 +480,29 @@ public final class FacesViewController: UIViewController {
         
         arModelNode.geometry?.firstMaterial?.lightingModel = .physicallyBased
         
+        // faceTextureNode.geometry?.firstMaterial?.lightingModel = .physicallyBased
+        // faceTextureNode.geometry?.firstMaterial?.metalness.contents = 1.0
+        // faceTextureNode.geometry?.firstMaterial?.roughness.contents = 0.0
+        
         // MARK: - Face Texture Materials
         // Face texture materials. Can be used for makeups etc.
         faceTextureMaterial.diffuse.contents = faceImage
+        // faceTextureMaterial.diffuse.contents = UIColor.white
+        // faceTextureMaterial.lightingModel = .physicallyBased
+        // faceTextureMaterial.lightingModel = .blinn
+        // faceTextureMaterial.metalness.contents = 1.0
+        // faceTextureMaterial.roughness.contents = 0.2
+        
+        // faceTextureMaterial.lightingModel = .blinn
+        // faceTextureMaterial.specular.contents = faceImage
+        // faceTextureMaterial.shininess = 1.0
+        
         // SCNMaterial does not premultiply alpha even with blendMode set to alpha, so do it manually.
         faceTextureMaterial.shaderModifiers =
             [SCNShaderModifierEntryPoint.fragment : "_output.color.rgb *= _output.color.a;"]
-        
+        // faceTextureMaterial.shaderModifiers = [SCNShaderModifierEntryPoint.fragment : "_output.color = gl_LastFragData[0] * _output.color"]
+        // faceTextureMaterial.blendMode = .multiply
+        // faceTextureMaterial.blendMode = .replace
         faceOccluderMaterial = occlusionMaterial()
         faceOccluderNode.renderingOrder = -50
     }
@@ -531,18 +624,12 @@ public final class FacesViewController: UIViewController {
         let captureVC = UIViewController()
         let capturedImageView = UIImageView(frame: view.frame)
         var img = blendImage()
-        let markImg = UIImage(named: "Vettons", in: assetBundle, compatibleWith: nil)
-        let imgVTMark = util.addWatermark(img, markImage: markImg!, view: view)
-        img = imgVTMark
+        // let markImg = UIImage(named: "Vettons", in: assetBundle, compatibleWith: nil)
+        // let imgVTMark = util.addWatermark(img, markImage: markImg!, view: view)
+        // img = imgVTMark
         
-        
-        // Apply image filters to image
-        // let imageFX = photoFX.random()
-        // img = applyCIFilter(img, with: imageFX)
-        // img = applyLUT(img, named: "lutTest.png")
-        // img = applyCIFilter(img, with: "CIEdges")
-        // print("vettonsVTO => imageFX : \(imageFX) applied")
-        
+        capturedImageView.clipsToBounds = false
+        capturedImageView.contentMode = .scaleAspectFill
         capturedImageView.image = img
         shareImage = img
         
@@ -550,21 +637,15 @@ public final class FacesViewController: UIViewController {
         let buttonShareImage = UIImage(named: "AR_Share_Arrow", in: assetBundle, compatibleWith: nil)
         
         buttonShare.center.x = self.view.center.x
-        buttonShare.center.y = self.view.frame.height - 50
+        buttonShare.center.y = self.view.frame.height - 100
         buttonShare.setImage(buttonShareImage, for: .normal)
-        // buttonShare.backgroundColor = UIColor.systemTeal
-        // buttonShare.setTitle("SHARE", for: .normal)
-        // buttonShare.setTitleColor(UIColor.white, for: .normal)
         buttonShare.addTarget(self, action:#selector(shareButtonAction(sender:)), for: .touchUpInside)
         buttonShare.layer.cornerRadius = 10
         
-        let buttonBack = UIButton(frame: CGRect(x: 30, y: 30, width: 54, height: 30))
+        let buttonBack = UIButton(frame: CGRect(x: 30, y: 60, width: 54, height: 30))
         let buttonBackImage = UIImage(named: "AR_View_Back", in: assetBundle, compatibleWith: nil)
         
         buttonBack.setImage(buttonBackImage, for: .normal)
-        // buttonBack.backgroundColor = UIColor.systemTeal
-        // buttonBack.setTitle("<", for: .normal)
-        // buttonBack.setTitleColor(UIColor.white, for: .normal)
         buttonBack.addTarget(self, action:#selector(backButtonAction(sender:)), for: .touchUpInside)
         buttonBack.layer.cornerRadius = 10
         
@@ -583,7 +664,11 @@ public final class FacesViewController: UIViewController {
     
     @objc func backButtonAction(sender : UIButton) {
         print("vettonsVTO => Back button pressed")
+        sceneView.overlaySKScene = nil
+        sceneView.removeFromSuperview()
         presentedViewController?.dismiss(animated: true, completion: nil)
+        
+        
     }
     
     @objc func shareButtonAction(sender : UIButton) {
@@ -664,8 +749,10 @@ extension FacesViewController : SCNSceneRendererDelegate {
         currentFaceFrame = nextFaceFrame
         
         if let face = currentFaceFrame?.face {
+            
             faceTextureNode.geometry = faceMeshConverter.geometryFromFace(face)
             faceTextureNode.geometry?.firstMaterial = faceTextureMaterial
+            faceTextureMaterial.diffuse.contents = ARAsset.faceImage
             faceOccluderNode.geometry = faceTextureNode.geometry?.copy() as? SCNGeometry
             faceOccluderNode.geometry?.firstMaterial = faceOccluderMaterial
             
@@ -685,8 +772,6 @@ extension FacesViewController : SCNSceneRendererDelegate {
         
         // Only show AR content when a face is detected
         sceneView.scene?.rootNode.isHidden = currentFaceFrame?.face == nil
-        
-        //faceTextureMaterial.blendMode = .alpha
     }
     
     public func renderer(
@@ -712,119 +797,6 @@ extension FacesViewController : SCNSceneRendererDelegate {
 
 // MARK: - Extensions and Functions
 
-// Apply CIFilter on UIImage
-func applyCIFilter(_ img:UIImage,with filter:String) -> UIImage {
-    
-    let context = CIContext()
-    
-    if let currentFilter = CIFilter(name: filter) {
-        let beginImage = CIImage(image: img)
-        currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
-        
-        let inputKeys = currentFilter.inputKeys.description
-        
-        if currentFilter.inputKeys.count > 1 {
-        print("vettonsVTO => CIFilter does have more than one input")
-        print("vettonsVTO => CIFilter Inputs : \(currentFilter.inputKeys)")
-            
-            if inputKeys.contains("inputIntensity") {
-                currentFilter.setValue(1, forKey: kCIInputIntensityKey)
-                print("inputIntensity applied")
-            }
-            
-            if inputKeys.contains("inputNoiseLevel") {
-                currentFilter.setValue(5, forKey: "inputNoiseLevel")
-                print("inputNoiseLevel applied")
-            }
-            
-            if inputKeys.contains("inputSharpness") {
-                currentFilter.setValue(10, forKey: kCIInputSharpnessKey)
-                print("inputSharpness applied")
-            }
-            
-            if inputKeys.contains("inputRadius") {
-                currentFilter.setValue(1, forKey: "inputRadius")
-                print("inputRadius applied")
-            }
-        }
-        
-        
-        if let cgimg = context.createCGImage(currentFilter.outputImage!, from: currentFilter.outputImage!.extent) {
-            let processedImage = UIImage(cgImage: cgimg)
-            return processedImage
-        }
-    }
-    print("vettonsVTO => CIFilter was not applied to the UIImage")
-    return img
-}
-
-func applyLUT(_ img:UIImage,named lutImage:String) -> UIImage {
-
-    let context = CIContext()
-    let lutFilter = lutFX.colorCubeFilterFromLUT(imageName: lutImage)
-    
-    if let currentFilter = lutFilter {
-        let beginImage = CIImage(image: img)
-        currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
-        
-        if currentFilter.inputKeys.count > 1 {
-        print("vettonsVTO => CIFilter does have more than one input")
-        print("vettonsVTO => CIFilter Inputs : \(currentFilter.inputKeys)")
-            
-        }
-
-        if let cgimg = context.createCGImage(currentFilter.outputImage!, from: currentFilter.outputImage!.extent) {
-            let processedImage = UIImage(cgImage: cgimg)
-            return processedImage
-        }
-    }
-    print("vettonsVTO => LUT was not applied to the UIImage")
-    return img
-}
-
-func applyCIFilterBuffer(buffer:CVPixelBuffer) -> CVPixelBuffer {
-    let context = CIContext()
-    
-    if let currentFilter = CIFilter(name: "CISepiaTone") {
-        let beginImage = CIImage(cvPixelBuffer: buffer)
-        currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
-        currentFilter.setValue(1.0, forKey: kCIInputIntensityKey)
-        
-        if let cgimg = context.createCGImage(currentFilter.outputImage!, from: currentFilter.outputImage!.extent) {
-            let processedImage = UIImage(cgImage: cgimg)
-            // do something interesting with the processed image
-            let newBuffer = bufferUIImage(from: processedImage)!
-            return newBuffer
-        }
-    }
-    
-    return buffer
-}
-
-func bufferUIImage(from image: UIImage) -> CVPixelBuffer? {
-    let attrs = [kCVPixelBufferCGImageCompatibilityKey: kCFBooleanTrue, kCVPixelBufferCGBitmapContextCompatibilityKey: kCFBooleanTrue] as CFDictionary
-    var pixelBuffer : CVPixelBuffer?
-    let status = CVPixelBufferCreate(kCFAllocatorDefault, Int(image.size.width), Int(image.size.height), kCVPixelFormatType_32ARGB, attrs, &pixelBuffer)
-    guard (status == kCVReturnSuccess) else {
-        return nil
-    }
-    
-    CVPixelBufferLockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags(rawValue: 0))
-    let pixelData = CVPixelBufferGetBaseAddress(pixelBuffer!)
-    
-    let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
-    let context = CGContext(data: pixelData, width: Int(image.size.width), height: Int(image.size.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer!), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
-    
-    context?.translateBy(x: 0, y: image.size.height)
-    context?.scaleBy(x: 1.0, y: -1.0)
-    
-    UIGraphicsPushContext(context!)
-    image.draw(in: CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height))
-    UIGraphicsPopContext()
-    CVPixelBufferUnlockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags(rawValue: 0))
-    
-    return pixelBuffer
-}
 
 /// Convert CVPixelBuffer to UIImage
 /// - Parameter buffer: CVPixelBuffer
@@ -883,98 +855,250 @@ func occlusionMaterial() -> SCNMaterial {
     return occlusionMaterial
 }
 
-// MARK: - SKScene for all the UI Stuff
+// MARK: - VTO Slider
+@available(iOS 12.0, *)
+extension FacesViewController: CircularCarouselDelegate, CircularCarouselDataSource {
+    // MARK: - Create the slider items
+    public func carousel(_: CircularCarousel, viewForItemAt indexPath: IndexPath, reuseView: UIView?) -> UIView {
+        
+        
+        var bg = view as? UIButton
 
-class aSKScene: SKScene {
-    
-    /*
-    let kCentimetersToMeters:Float = 0.01
-    
-    let sliderX = UISlider(frame: CGRect(x: 50, y: 60, width: 250, height: 30))
-    let sliderY = UISlider(frame: CGRect(x: 50, y: 120, width: 250, height: 30))
-    let sliderZ = UISlider(frame: CGRect(x: 50, y: 180, width: 250, height: 30))
-    
-    let labelX = UILabel(frame: CGRect(x: 310, y: 60, width: 150, height: 30))
-    let labelY = UILabel(frame: CGRect(x: 310, y: 120, width: 150, height: 30))
-    let labelZ = UILabel(frame: CGRect(x: 310, y: 180, width: 150, height: 30))
-    
-    override func didMove(to view: SKView) {
-        // loadSliderX()
-        // loadSliderY()
-        // loadSliderZ()
-        // loadLabels()
-        // loadButtons()
+        if bg == nil {
+            let content = UIButton(frame: CGRect(x: 2.5, y: 2.5, width: 65, height: 65))
+            bg = UIButton(frame: CGRect(x: 0, y: 0, width: 70, height: 70))
+            
+            content.setBackgroundImage(ARAsset.sliderImageArray[indexPath.item], for: .normal)
+            content.layer.cornerRadius = 32.5
+            
+            bg?.addSubview(content)
+            bg?.backgroundColor = .white
+            bg?.layer.shadowRadius = 15
+            bg?.layer.shadowOffset = CGSize(width: 0, height: 15)
+            bg?.layer.shadowOpacity =  0.2
+            
+            bg?.layer.cornerRadius = 35
+            
+        }
+
+        return bg!
     }
     
-    override func update(_ currentTime: TimeInterval) {
-        DispatchQueue.main.async { // Run on Main Thread
-            self.labelX.text = " X = \(self.sliderX.value)"
-            self.labelY.text = " Y = \(self.sliderY.value)"
-            self.labelZ.text = " Z = \(self.sliderZ.value)"
+    public func numberOfItems(inCarousel carousel: CircularCarousel) -> Int {
+        return VTOSliderItem.count
+    }
+    
+    public func startingItemIndex(inCarousel carousel: CircularCarousel) -> Int {
+        print("==============startingItemIndex=================")
+        print("vettonsVTO => VTOSliderItem.index \(VTOSliderItem.index)")
+        return VTOSliderItem.index /* Insert starting item index */
+    }
+    
+    struct carouselOption {
+        static let itemWidth:CGFloat = 50
+        static let scaleMultiplier:CGFloat = 1.0
+        static let minScale:CGFloat = 1.0
+        static let maxScale:CGFloat = 1.1
+        static let minFade:CGFloat = -1
+        static let maxFade:CGFloat = 1
+        static let fadeRange:CGFloat = 50.0
+    }
+    
+    public func carousel<CGFloat>(_ carousel: CircularCarousel, valueForOption option: CircularCarouselOption, withDefaultValue defaultValue: CGFloat) -> CGFloat {
+        switch option {
+        case .itemWidth:
+            return carouselOption.itemWidth as! CGFloat
+        case .maxScale:
+            return carouselOption.maxScale as! CGFloat
+        case .minScale:
+            return carouselOption.minScale as! CGFloat
+        case .fadeMin:
+            return carouselOption.minFade as! CGFloat
+        case .fadeMax:
+            return carouselOption.maxFade as! CGFloat
+        case .scaleMultiplier:
+            return carouselOption.scaleMultiplier as! CGFloat
+        case .fadeRange:
+            return carouselOption.fadeRange as! CGFloat
+        
+        /*  Insert one of the following handlers :
+        case spacing
+        case fadeMin
+        case fadeMax
+        case fadeRange
+        case fadeMinAlpha
+        case offsetMultiplier
+        case itemWidth
+        case scaleMultiplier
+        case minScale
+        case maxScale
+        */
+        default:
+            return defaultValue
         }
     }
     
-    @objc func valueXChanged(sender: UISlider) {
-        // print("sliderX value => \(sender.value * kCentimetersToMeters)")
-        pos_sliderX = sender.value * kCentimetersToMeters
-    }
-    @objc func valueYChanged(sender: UISlider) {
-        // print("sliderY value => \(sender.value * kCentimetersToMeters)")
-        pos_sliderY = sender.value * kCentimetersToMeters
-    }
-    @objc func valueZChanged(sender: UISlider) {
-        // print("sliderZ value => \(sender.value * kCentimetersToMeters)")
-        pos_sliderZ = sender.value * kCentimetersToMeters
+    public func carousel(_ carousel: CircularCarousel, didSelectItemAtIndex index: Int) {
+        
+        currentSliderIndex = index
+        
+        // Create a string for the output data to send back to RN. Didn't use because we only pass during dismiss
+        // VTOSliderItem.outputData = "\(VTOSliderItem.name)|\(VTOSliderItem.url)"
+        
+        // Uncomment if we want to sent event to RN
+        // RNEventEmitter.sharedInstance.dispatch(name: "onCarouselSelected", body: ["name": "\(VTOSliderItem.name)", "data": ["url":"\(VTOSliderItem.faceImage)", "productVariantID":"\(VTOSliderItem.productVariantID)", "test":true]])
     }
     
-    func loadLabels(){
-        labelX.textColor = UIColor.white
-        labelX.backgroundColor = UIColor.black.withAlphaComponent(0.3)
-        labelX.text = " Slider X : \(sliderX.value)"
-        labelX.transform = CGAffineTransform(scaleX: -1, y: 1)
+    public func carousel(_ carousel: CircularCarousel, willBeginScrollingToIndex index: Int) {
         
-        labelY.textColor = UIColor.white
-        labelY.backgroundColor = UIColor.black.withAlphaComponent(0.3)
-        labelY.text = " Slider Y : \(sliderY.value)"
-        labelY.transform = CGAffineTransform(scaleX: -1, y: 1)
+        updateData(fromJSONString: variantJSON, for: index)
         
-        labelZ.textColor = UIColor.white
-        labelZ.backgroundColor = UIColor.black.withAlphaComponent(0.3)
-        labelZ.text = " Slider Z : \(sliderZ.value)"
-        labelZ.transform = CGAffineTransform(scaleX: -1, y: 1)
+        updateImage2(with: VTOSliderItem.faceImage, for: index)
         
-        view?.addSubview(labelX)
-        view?.addSubview(labelY)
-        view?.addSubview(labelZ)
+        // Create a string for the output data to send back to RN. Didn't use because we only pass during dismiss
+        // VTOSliderItem.outputData = "\(VTOSliderItem.name)|\(VTOSliderItem.url)"
+        
+        // Minor haptic to indicate you have scrolled the slider
+        Vibration.light.vibrate()
+        
+        currentSliderIndex = index
+        print("vettonsVTO => VTOSlider | \(currentSliderIndex)")
+        
+        // Uncomment if we want to sent event to RN
+        // RNEventEmitter.sharedInstance.dispatch(name: "onCarouselSelected", body: ["name": "\(VTOSliderItem.name)", "data": ["url":"\(VTOSliderItem.faceImage)", "productVariantID":"\(VTOSliderItem.productVariantID)", "test":true]])
+        
     }
     
-    func loadSliderX() {
-        sliderX.maximumValue = 10
-        sliderX.minimumValue = -10
-        sliderX.tintColor = UIColor.gray
-        sliderX.isUserInteractionEnabled = true
-        sliderX.addTarget(self, action: #selector(valueXChanged(sender:)), for: .valueChanged)
-        sliderX.transform = CGAffineTransform(scaleX: -1, y: 1)
-        view?.addSubview(sliderX)
+    public func carousel(_ carousel: CircularCarousel, spacingForOffset offset: CGFloat) -> CGFloat {
+        /* Based on the offset from center, adjust the spacing of the item */
+        return 2
     }
-    func loadSliderY() {
-        sliderY.maximumValue = 10
-        sliderY.minimumValue = -10
-        sliderY.tintColor = UIColor.gray
-        sliderY.isUserInteractionEnabled = true
-        sliderY.addTarget(self, action: #selector(valueYChanged(sender:)), for: .valueChanged)
-        sliderY.transform = CGAffineTransform(scaleX: -1, y: 1)
-        view?.addSubview(sliderY)
+}
+
+// MARK: - Update Image v2
+func updateImage2(with imageURL:String, for index:Int) {
+    let url = URL(string: imageURL)
+    
+    let defaults = UserDefaults.standard
+    var storedData = defaults.data(forKey: "VTOImageURL\(index)")
+    
+    do {
+        if storedData != nil {
+            // Image is available, use data in persistence
+            ARAsset.faceImage = UIImage(data: storedData!)
+            
+        } else {
+            // Image is not available, download and store in persistence
+            
+            // Download the url and save as data
+            let data = try! Data(contentsOf: url!)
+            
+            // Save data to UserDefaults
+            defaults.set(data, forKey: "VTOImageURL\(index)")
+            storedData = data
+            DispatchQueue.main.async {
+                ARAsset.faceImage = UIImage(data: storedData!)
+            }
+        }
+    } catch  {
+        fatalError("vettonsVTO => Cannot update ARAsset.faceImage")
     }
-    func loadSliderZ() {
-        sliderZ.maximumValue = 10
-        sliderZ.minimumValue = -10
-        sliderZ.tintColor = UIColor.gray
-        sliderZ.isUserInteractionEnabled = true
-        sliderZ.addTarget(self, action: #selector(valueZChanged(sender:)), for: .valueChanged)
-        sliderZ.transform = CGAffineTransform(scaleX: -1, y: 1)
-        view?.addSubview(sliderZ)
+}
+
+/// Update ImageDataItem struct with content from JSON String for selected index value
+/// - Parameters:
+///   - string: JSON String data
+///   - index: index of the item
+func updateData(fromJSONString string:String, for index:Int) {
+    
+    let str: String = string
+    let stringData: Data = str.data(using: .utf8)!
+    let variantDataArray = try! JSONDecoder().decode([VariantData].self, from: stringData)
+    
+    VTOSliderItem.name = variantDataArray[index].name
+    VTOSliderItem.url = variantDataArray[index].faceImage
+    
+    VTOSliderItem.faceImage = variantDataArray[index].faceImage
+    VTOSliderItem.sliderImage = variantDataArray[index].sliderImage
+    VTOSliderItem.productVariantID = variantDataArray[index].productVariantID
+    
+    if (DEBUGMODE) {
+        print("vettonsVTO => VTO Slider | variantDataArray => \(variantDataArray)")
+        print("vettonsVTO => VTO Slider | VTOSliderItem.name updated to \(variantDataArray[index].name)")
+        print("vettonsVTO => VTO Slider | VTOSliderItem.url updated to \(variantDataArray[index].faceImage)")
+        print("vettonsVTO => VTO Slider | VTOSliderItem.faceImage updated to \(variantDataArray[index].faceImage)")
+        print("vettonsVTO => VTO Slider | VTOSliderItem.faceImage updated to \(variantDataArray[index].faceImage)")
+        print("vettonsVTO => VTO Slider | VTOSliderItem.productVariantID updated to \(variantDataArray[index].productVariantID)")
+        
     }
-     */
     
 }
+
+func updateCount(fromJSONString string:String) {
+    
+    let str: String = string
+    let stringData: Data = str.data(using: .utf8)!
+    let variantDataArray = try! JSONDecoder().decode([VariantData].self, from: stringData)
+    
+    
+    
+    VTOSliderItem.count = variantDataArray.count
+    
+    if (DEBUGMODE) {
+        print("vettonsVTO => VTO Slider | variantDataArray => \(variantDataArray)")
+        print("vettonsVTO => VTO Slider | VTOSliderItem.count updated to \(variantDataArray.count)")
+    }
+    
+}
+
+func updateSliderImages(fromJSONString string:String) {
+    
+    let str: String = string
+    let stringData: Data = str.data(using: .utf8)!
+    let variantDataArray = try! JSONDecoder().decode([VariantData].self, from: stringData)
+    
+    for n in 0..<variantDataArray.count {
+            let v = variantDataArray[n]
+            let imageURL = v.sliderImage
+            let url = URL(string: imageURL)
+            print("imageURL in sliderImage => \(imageURL)")
+            
+            let WebPCoder = SDImageWebPCoder.shared
+            SDImageCodersManager.shared.addCoder(WebPCoder)
+            
+            let defaults = UserDefaults.standard
+            var storedData = defaults.data(forKey: "VTOVariantSliderThumb\(n)")
+            
+            do {
+                if storedData != nil {
+                    print("image is available. using the current stored data")
+                    let img = UIImage(data: storedData!)
+                    ARAsset.sliderImageArray.append(img!)
+                    
+                } else {
+                    print("image is not yet stored. downloading and storing ..")
+                    
+                    // Download the url and save as data
+                    let data = try! Data(contentsOf: url!)
+                    let image = SDImageWebPCoder.shared.decodedImage(with: data, options: nil)
+                    
+                    let imagePngData = image!.pngData()
+                    
+                    // Save data to UserDefaults
+                    defaults.set(imagePngData, forKey: "VTOVariantSliderThumb\(n)")
+                    storedData = imagePngData
+                    DispatchQueue.main.async {
+                        let img = UIImage(data: storedData!)
+                        ARAsset.sliderImageArray.append(img!)
+                    }
+                }
+            } catch  {
+                fatalError("vettonsVTO => Cannot add image into ARAsset.sliderImageArray")
+            }
+        
+    }
+    
+    print("sliderImageArr =>\(ARAsset.sliderImageArray)")
+    
+}
+

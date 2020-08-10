@@ -54,6 +54,7 @@ lazy var allEvents: [String] = {
   
   // Append all events here
   allEventNames.append("onPress")
+  allEventNames.append("onCarouselSelected")
   allEventNames.append("error")
   
   return allEventNames

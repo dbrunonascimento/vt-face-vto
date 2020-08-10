@@ -14,7 +14,8 @@
 
 @interface RCT_EXTERN_MODULE(FaceVTO, NSObject);
 
-RCT_EXTERN_METHOD(display:(NSString)url type:(NSString)vtoType);
+RCT_EXTERN_METHOD(display:(NSString)url type:(NSString)vtoType data:(NSString)variantData withIndex:(NSInteger)index);
+RCT_EXTERN_METHOD(sendString:(NSString)string);
 
 - (dispatch_queue_t)methodQueue
 {

@@ -1,5 +1,5 @@
 # vt-face-vto
-v1.0.5
+v1.0.6
 
 ## Getting started
 
@@ -22,18 +22,62 @@ import FaceVTO, {FaceVTOEvent} from 'vt-face-vto';
 
     // URL of the Face Texture file to download
     // let url = 'https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/FaceTexture%2FBrand%20A%2FfullMakeup4.png?alt=media&token=d2e15884-d9e0-4132-b56c-d83b453d18ab'
-
+    
+    let productJSON = [
+  {
+    "name": "Provocative",
+    "productVariantID": "PV0000005392",
+    "sliderImage": "https://content.vettons.com/media/VIN0000004069-PV0000005392-1.webp",
+    "faceImage": "https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Product%2FVIN0000004069%2FLLIPSTICK-01.png?alt=media&token=697df1c4-0a7c-4325-9fd4-e46a5cee4a10"
+  },
+  {
+    "name": "Positive",
+    "productVariantID": "PV0000005393",
+    "sliderImage": "https://content.vettons.com/media/VIN0000004069-PV0000005393-1.webp",
+    "faceImage": "https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Product%2FVIN0000004069%2FLLIPSTICK-02.png?alt=media&token=cf462192-df4c-46e1-acb5-1a8e64d1bcd2"
+  },
+  {
+    "name": "Alluring",
+    "productVariantID": "PV0000005394",
+    "sliderImage": "https://content.vettons.com/media/VIN0000004069-PV0000005394-1.webp",
+    "faceImage": "https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Product%2FVIN0000004069%2FLLIPSTICK-03.png?alt=media&token=b6dab1e3-41b3-4e75-94e3-04df82801d2d"
+  },
+  {
+    "name": "Classy",
+    "productVariantID": "PV0000005395",
+    "sliderImage": "https://content.vettons.com/media/VIN0000004069-PV0000005395-1.webp",
+    "faceImage": "https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Product%2FVIN0000004069%2FLLIPSTICK-04.png?alt=media&token=990f096d-fe1c-41e5-b10b-9c650954aacf"
+  },
+  {
+    "name": "Powerful",
+    "productVariantID": "PV0000005396",
+    "sliderImage": "https://content.vettons.com/media/VIN0000004069-PV0000005396-1.webp",
+    "faceImage": "https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Product%2FVIN0000004069%2FLLIPSTICK-05.png?alt=media&token=39b1b944-8679-4e1b-aad8-bec9d7fa06c1"
+  }
+]
 
     // supported vtoType as for now
     // glass, makeup
-    let vtoType = "glass"
+    let vtoType = "makeup"
+
+
+    /**
+     * JSON object example
+     * "name": "Powerful",
+     * "productVariantID": "PV0000005396",
+     * "sliderImage": "https://content.vettons.com/media/VIN0000004069-PV0000005396-1.webp",
+     * "faceImage": "https://firebasestorage.googleapis.com/v0/b/vto-asset.appspot.com/o/Product%2FVIN0000004069%2FLLIPSTICK-05.png?alt=media&token=39b1b944-8679-4e1b-aad8-bec9d7fa06c1"
+     */
+    let json = JSON.stringify(productJSON)
 
     /**
      * Display the Face VTO
-     * @param {String} url URL of the 3D Model / texture(KIV)
+     * @param {String} url URL of the asset ()
      * @param {String} vtoType Type of VTO
+     * @param {String} json JSON of the variants
+     * @param {Int} currentIndex Current index of the variant
      */
-    FaceVTO.display(url,vtoType)
+    FaceVTO.display(url, vtoType, json, currentIndex);
 
     /**
      * Listen to event from Native
@@ -43,7 +87,7 @@ import FaceVTO, {FaceVTOEvent} from 'vt-face-vto';
         if (onPress.type === 'capture') {
         if (onPress.data.clicked) {
           console.log('capture button Clicked');
-          // this.props.navigation.navigate('ARCategory'); //Navigate to AR Category page
+
         }
       }
       if (onPress.type === 'dismiss') {

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import AVFoundation
 import SceneKit
 
 /// Utilities class
@@ -62,9 +63,12 @@ struct ARAsset {
     static var modelURL: URL?
     static var textureURL: URL?
     static var faceImage: UIImage?
+    static var sliderImage: UIImage?
+    static var sliderImageArray: [UIImage] = []
     static var vtoType: VTOType?
     static var isModelAvailable: Bool = false
     static var isTextureAvailable: Bool = false
+    static var stringFromRN: String = ""
 }
 
 enum VTOType {
@@ -108,124 +112,81 @@ class Utilities {
         UIGraphicsBeginImageContextWithOptions(image.size, false, 0)
         image.draw(in: CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
         markImage.draw(in: CGRect(x: markImagePosX, y: markImagePosY, width: markImageWidth, height: markImageHeight), blendMode: CGBlendMode.screen, alpha: 0.8)
-        let finalImage = UIGraphicsGetImageFromCurrentImageContext()
+        var finalImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         
         //        End Drawing
         
+        finalImage = UIImage(cgImage: (finalImage?.cgImage)!)
         return finalImage!
     }
     
 }
 
-class lutFX {
-    
-    static func colorCubeFilterFromLUT(imageName : String) -> CIFilter? {
-        
-        let size = 64
-        
-        let lutImage    = UIImage(named: imageName)!.cgImage
-        let lutWidth    = lutImage!.width
-        let lutHeight   = lutImage!.height
-        let rowCount    = lutHeight / size
-        let columnCount = lutWidth / size
-        
-        if ((lutWidth % size != 0) || (lutHeight % size != 0) || (rowCount * columnCount != size)) {
-            NSLog("Invalid colorLUT %@", imageName);
-            return nil
-        }
-        
-        let bitmap  = getBytesFromImage(image: UIImage(named: imageName))!
-        let floatSize = MemoryLayout<Float>.size
-        
-        let cubeData = UnsafeMutablePointer<Float>.allocate(capacity: size * size * size * 4 * floatSize)
-        var z = 0
-        var bitmapOffset = 0
-        
-        for _ in 0 ..< rowCount {
-            for y in 0 ..< size {
-                let tmp = z
-                for _ in 0 ..< columnCount {
-                    for x in 0 ..< size {
-                        
-                        let alpha   = Float(bitmap[bitmapOffset]) / 255.0
-                        let red     = Float(bitmap[bitmapOffset+1]) / 255.0
-                        let green   = Float(bitmap[bitmapOffset+2]) / 255.0
-                        let blue    = Float(bitmap[bitmapOffset+3]) / 255.0
-                        
-                        let dataOffset = (z * size * size + y * size + x) * 4
-                        
-                        cubeData[dataOffset + 3] = alpha
-                        cubeData[dataOffset + 2] = red
-                        cubeData[dataOffset + 1] = green
-                        cubeData[dataOffset + 0] = blue
-                        bitmapOffset += 4
-                    }
-                    z += 1
-                }
-                z = tmp
-            }
-            z += columnCount
-        }
-        
-        let colorCubeData = NSData(bytesNoCopy: cubeData, length: size * size * size * 4 * floatSize, freeWhenDone: true)
-        
-        // create CIColorCube Filter
-        let filter = CIFilter(name: "CIColorCube")
-        filter?.setValue(colorCubeData, forKey: "inputCubeData")
-        filter?.setValue(size, forKey: "inputCubeDimension")
-        
-        return filter
-    }
-    
-    
-    static func getBytesFromImage(image:UIImage?) -> [UInt8]?
-    {
-        var pixelValues: [UInt8]?
-        if let imageRef = image?.cgImage {
-            let width = Int(imageRef.width)
-            let height = Int(imageRef.height)
-            let bitsPerComponent = 8
-            let bytesPerRow = width * 4
-            let totalBytes = height * bytesPerRow
-            
-            let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            var intensities = [UInt8](repeating: 0, count: totalBytes)
-            
-            let contextRef = CGContext(data: &intensities, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo)
-            contextRef?.draw(imageRef, in: CGRect(x: 0.0, y: 0.0, width: CGFloat(width), height: CGFloat(height)))
-            
-            pixelValues = intensities
-        }
-        return pixelValues!
-    }
-    
+
+// MARK:- ImageData structs
+struct VariantData: Codable {
+    // Make sure it follows the JSON value type
+    let name: String
+    let productVariantID: String
+    let faceImage: String
+    let sliderImage: String
 }
 
-enum photoFX: CaseIterable {
-    case CIPhotoEffectFade, CIPhotoEffectInstant, CIPhotoEffectMono, CIPhotoEffectChrome, CIThermal, CIXRay, CIPhotoEffectTonal
-    
-    static func random() -> String{
-        let a = photoFX.allCases.randomElement()
-        
-        switch a {
-        case .CIPhotoEffectChrome:
-            return "CIPhotoEffectChrome"
-        case .CIPhotoEffectInstant:
-            return "CIPhotoEffectInstant"
-        case .CIPhotoEffectMono:
-            return "CIPhotoEffectMono"
-        case .CIPhotoEffectFade:
-            return "CIPhotoEffectFade"
-        case .CIThermal:
-            return "CIThermal"
-        case .CIXRay:
-            return "CIXRay"
-        case .CIPhotoEffectTonal:
-            return "CIPhotoEffectTonal"
-        case .none:
-            return "none"
+struct VTOSliderItem {
+    static var name = "Name"
+    static var url = "URL"
+    static var productVariantID = "productVariantID"
+    static var faceImage = "faceImage"
+    static var sliderImage = "sliderImage"
+    static var sliderImageArray = [""]
+    static var count = 0
+    static var outputData = "outputData"
+    static var index = 0
+}
+
+// MARK:- Vibration for haptics
+@available(iOS 12.0, *)
+enum Vibration {
+    case error
+    case success
+    case warning
+    case light
+    case medium
+    case heavy
+    @available(iOS 13.0, *)
+    case soft
+    @available(iOS 13.0, *)
+    case rigid
+    case selection
+    case oldSchool
+
+    public func vibrate() {
+        switch self {
+        case .error:
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        case .success:
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case .warning:
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        case .light:
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        case .medium:
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case .heavy:
+            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        case .soft:
+            if #available(iOS 13.0, *) {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            }
+        case .rigid:
+            if #available(iOS 13.0, *) {
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            }
+        case .selection:
+            UISelectionFeedbackGenerator().selectionChanged()
+        case .oldSchool:
+            AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
         }
     }
 }

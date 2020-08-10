@@ -21,7 +21,9 @@ Pod::Spec.new do |s|
   s.requires_arc = true
 
   s.dependency "React"
-  s.dependency 'ARCore/AugmentedFaces', '~> 1.16.0'
+  s.dependency 'ARCore/AugmentedFaces', '~> 1.18.0'
+  s.dependency 'CircularCarousel'
+  s.dependency 'SDWebImageWebPCoder'
   # ...
   # s.dependency "..."
 
