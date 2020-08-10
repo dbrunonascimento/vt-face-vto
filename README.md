@@ -1,5 +1,5 @@
 # vt-face-vto
-v1.0.6
+v1.0.7
 
 ## Getting started
 
@@ -93,6 +93,9 @@ import FaceVTO, {FaceVTOEvent} from 'vt-face-vto';
       if (onPress.type === 'dismiss') {
         if (onPress.data.clicked) {
           console.log('dismiss button Clicked');
+          console.log('Product Name : ' + onPress.data.name);
+          console.log('Product Variant ID : ' + onPress.data.productVariantID);
+          console.log('Index : ' + onPress.data.index)
         }
       }
       if (onPress.type === 'share') {
