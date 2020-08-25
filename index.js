@@ -6,11 +6,17 @@ export default class FaceVTO {
     
     /**
      * Display the Face VTO
-     * @param {String} url URL of the 3D Model
+     * @param {String} url URL of the asset
      * @param {String} vtoType Type of VTO
+     * @param {String} json JSON of the variants
+     * @param {Int} currentIndex Current index of the variant
      */
-    static display(url,vtoType){
-        NativeFaceVTO.display(url,vtoType);
+    static display(url,vtoType,json,currentIndex){
+        NativeFaceVTO.display(url,vtoType,json,currentIndex);
+    }
+
+    static sendString(string){
+        NativeFaceVTO.sendString(string);
     }
 }
 

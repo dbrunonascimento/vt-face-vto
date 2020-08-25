@@ -1,5 +1,5 @@
 # vt-face-vto
-v1.0.7
+v1.0.8
 
 ## Getting started
 
