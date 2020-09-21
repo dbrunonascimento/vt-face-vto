@@ -1,7 +1,7 @@
 {
   "name": "vt-face-vto",
   "title": "vt-face-vto",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "VT Face VTO Module",
   "main": "index.js",
   "scripts": {
