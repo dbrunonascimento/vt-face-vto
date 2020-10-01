@@ -129,6 +129,7 @@ public final class FacesViewController: UIViewController {
                 variantJSON = ARAsset.stringFromRN
                 updateCount(fromJSONString: variantJSON)
                 updateSliderImages(fromJSONString: variantJSON)
+                updateFaceImages(fromJSONString: variantJSON)
                 setupUI()
                 setupScene()
                 
@@ -150,6 +151,7 @@ public final class FacesViewController: UIViewController {
 
         updateCount(fromJSONString: variantJSON)
         updateSliderImages(fromJSONString: variantJSON)
+        updateFaceImages(fromJSONString: variantJSON)
         
         setupAssetBundle()
         setupUI()
@@ -244,7 +246,7 @@ public final class FacesViewController: UIViewController {
         
         // Adding all view to the overlayScene
         
-        if VTOSliderItem.count > 1 { // Carousel only available if it is more than one	
+        if VTOSliderItem.count > 1 { // Carousel only available if it is more than one
             overlayScene.view?.addSubview(carousel)
         }
         overlayScene.view?.addSubview(gradientTop)
@@ -1102,3 +1104,39 @@ func updateSliderImages(fromJSONString string:String) {
     
 }
 
+
+func updateFaceImages(fromJSONString string:String) {
+    // Download all faceImage and store it as data in persistence
+    
+    let str: String = string
+    let stringData: Data = str.data(using: .utf8)!
+    let variantDataArray = try! JSONDecoder().decode([VariantData].self, from: stringData)
+    
+    for n in 0..<variantDataArray.count {
+            let v = variantDataArray[n]
+            let imageURL = v.faceImage
+            let url = URL(string: imageURL)
+            print("vettonsVTO => imageURL in faceImage => \(imageURL)")
+            
+            let defaults = UserDefaults.standard
+            var storedData = defaults.data(forKey: "VTOImageURL\(n)")
+            
+            do {
+                if storedData != nil {
+                    print("vettonsVTO => VTOImageURL\(n) is available")
+                    
+                } else {
+                    print("vettonsVTO => VTOImageURL\(n) is not available, downloading..")
+                    
+                    let data = try! Data(contentsOf: url!)
+                    
+                    // Save data to UserDefaults
+                    defaults.set(data, forKey: "VTOImageURL\(n)")
+                    
+                }
+            } catch  {
+                fatalError("vettonsVTO => Cannot update VTOImageURL")
+            }
+        
+    }
+}
